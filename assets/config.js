@@ -14,9 +14,9 @@
    no login, progress saved only in this browser (original behaviour).
    ============================================================ */
 window.PBI_CONFIG = {
-  SUPABASE_URL:      "",   // e.g. "https://abcdxyz.supabase.co"
-  SUPABASE_ANON_KEY: "",   // the long "anon public" key
+  SUPABASE_URL:      "https://mvymkhlzwgeqfubenuof.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12eW1raGx6d2dlcWZ1YmVudW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwNjU0MDMsImV4cCI6MjEwMDY0MTQwM30.NeI4fw1RCc1cmJ3aDtZQsML2amapg9CmebnR7imZgFY",
 
   // Cosmetic only: shown on the sign-in screen.
-  ORG_NAME: "your institution"
+  ORG_NAME: "boomtechlms"
 };
