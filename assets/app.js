@@ -23,7 +23,10 @@ function toast(msg, kind="ok"){
 /* ============================================================ NAV */
 function renderNav(){
   const cur = (location.hash||"#/home").split("/")[1];
-  $("#navList").innerHTML = PBI.nav.map(n=>{
+  const items = PBI.nav.slice();
+  if(window.Cloud && Cloud.enabled && Cloud.isAdmin())
+    items.push({ id:"admin", label:"Admin", icon:"trophy" });
+  $("#navList").innerHTML = items.map(n=>{
     const active = (n.id===cur) || (cur==="module"&&n.id==="modules") || (cur==="lesson"&&n.id==="modules") || (cur==="case"&&n.id==="cases");
     return `<li><a href="#/${n.id}" class="${active?"active":""}">
       <svg class="nav-ico" viewBox="0 0 24 24"><path d="${PBI.icons[n.icon]}"/></svg>${esc(n.label)}</a></li>`;
@@ -1121,6 +1124,81 @@ function wireChrome(){
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#a11yModal").hidden) $("#a11yModal").hidden=true; closeNavDrawer(); } });
 }
 
+/* ============================================================ ADMIN (admins only) */
+route("admin", async ()=>{
+  if(!(window.Cloud && Cloud.enabled && Cloud.isAdmin())){ location.hash="#/home"; return; }
+  view.innerHTML = crumbs([["Home","#/home"],["Admin",""]]) +
+    `<div class="sec-head"><div><span class="eyebrow">Instructor view</span><h1>Faculty progress</h1>
+      <p>Everyone who has signed in to your cohort. Progress updates automatically.</p></div>
+      <button class="btn btn-ghost btn-sm" id="admExport">⬇ Export CSV</button></div>
+    <div id="admCohort"><div class="card"><div class="skeleton" style="height:44px;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:44px;margin-bottom:8px"></div><div class="skeleton" style="height:44px"></div></div></div>
+    <div class="sec-head" style="margin-top:34px"><div><span class="eyebrow">Access</span><h2>Approved faculty allowlist</h2>
+      <p>Only these email addresses can sign in and learn.</p></div></div>
+    <div id="admAllow" class="card"><div class="skeleton" style="height:40px"></div></div>`;
+
+  let cohort=[];
+  try{ cohort = await Cloud.listCohort(); }
+  catch(e){ $("#admCohort").innerHTML = adminError("Couldn't load the cohort."); }
+  renderCohort(cohort);
+  loadAllow();
+
+  function renderCohort(rows){
+    const box=$("#admCohort"); if(!box) return;
+    if(!rows.length){ box.innerHTML = `<div class="empty"><div class="e-emoji">🪑</div><h3>No faculty yet</h3>
+      <p class="muted">When someone on the allowlist signs in, they'll appear here. Add emails below and share the link.</p></div>`; return; }
+    rows.sort((a,b)=>b.pct-a.pct);
+    box.innerHTML = `<div class="table-scroll"><table class="tbl"><thead><tr>
+      <th>Name</th><th>Email</th><th>Progress</th><th>Lessons</th><th>Avg quiz</th><th>Readiness</th><th>Streak</th><th>Last active</th>
+      </tr></thead><tbody>${rows.map(r=>{
+        const m=Store.masteryLabel(r.pct||0);
+        return `<tr>
+          <td><b>${esc(r.name)}</b>${r.role==="admin"?' <span class="tag purple">admin</span>':''}</td>
+          <td class="muted">${esc(r.email)}</td>
+          <td style="min-width:130px"><div class="bar" style="margin-bottom:4px"><i style="width:${r.pct||0}%"></i></div>
+            <span class="tag ${m.c}">${r.pct||0}% · ${m.t}</span></td>
+          <td>${r.lessons_done||0}/${PBI.allLessons.length}</td>
+          <td>${r.avg_quiz||0}%</td><td>${r.readiness||0}</td><td>🔥 ${r.streak||0}</td>
+          <td class="muted">${fmtDate(r.updated_at||r.last_seen)}</td>
+        </tr>`;}).join("")}</tbody></table></div>
+      <p class="muted" style="margin-top:10px;font-size:.86em">${rows.length} learner${rows.length>1?"s":""} · sorted by progress</p>`;
+    $("#admExport").onclick=()=>exportCohort(rows);
+  }
+  async function loadAllow(){
+    const box=$("#admAllow"); let list=[];
+    try{ list = await Cloud.listAllowed(); }catch(e){ box.innerHTML=adminError("Couldn't load the allowlist."); return; }
+    box.innerHTML = `<form id="allowForm" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <input id="allowEmail" type="email" placeholder="faculty@email.com" aria-label="Email to approve"
+          style="flex:1;min-width:200px;padding:.6em .9em;border-radius:999px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink);font:inherit" required>
+        <button class="btn btn-primary btn-sm" type="submit">Add to allowlist</button></form>
+      ${list.length? `<div class="pill-row">${list.map(a=>`<span class="tag" style="gap:8px">${esc(a.email)}
+        <button class="linklike" data-rm="${esc(a.email)}" aria-label="Remove ${esc(a.email)}" style="color:var(--red)">✕</button></span>`).join("")}</div>`
+        : `<p class="muted">No emails yet. Add the first faculty member above.</p>`}`;
+    $("#allowForm").onsubmit=async e=>{ e.preventDefault(); const v=$("#allowEmail").value;
+      try{ await Cloud.addAllowed(v); toast("Added to allowlist"); loadAllow(); }
+      catch(err){ toast(err.message||"Couldn't add that email","warn"); } };
+    $$("[data-rm]").forEach(b=>b.onclick=async()=>{
+      if(!confirm("Remove "+b.dataset.rm+" from the allowlist? They'll lose access on next sign-in.")) return;
+      try{ await Cloud.removeAllowed(b.dataset.rm); toast("Removed"); loadAllow(); }catch(err){ toast("Couldn't remove","warn"); } });
+  }
+  function exportCohort(rows){
+    const head=["Name","Email","Role","Progress %","Lessons done","Avg quiz %","Readiness","Streak","Last active"];
+    const lines=[head.join(",")].concat(rows.map(r=>[r.name,r.email,r.role,r.pct||0,r.lessons_done||0,r.avg_quiz||0,r.readiness||0,r.streak||0,fmtDate(r.updated_at||r.last_seen)]
+      .map(c=>`"${String(c==null?"":c).replace(/"/g,'""')}"`).join(",")));
+    downloadFile("faculty_progress.csv", lines.join("\n"), "text/csv");
+    toast("CSV exported");
+  }
+  function fmtDate(d){ if(!d) return "—"; try{ return new Date(d).toLocaleDateString(undefined,{day:"numeric",month:"short"}); }catch(e){ return "—"; } }
+  function adminError(msg){ return `<div class="callout warn"><strong>${esc(msg)}</strong> Check your connection and refresh.</div>`; }
+});
+
+/* download helper reused by admin + case study */
+function downloadFile(name, content, type){
+  const blob=new Blob([content],{type:type||"text/plain"}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); },100);
+}
+
 /* ============================================================ INIT */
 function init(){
   wireChrome(); wireSearch(); Assistant.init();
@@ -1128,5 +1206,15 @@ function init(){
   if(!location.hash) location.hash="#/home";
   router();
 }
-if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+
+/* Expose a small surface so auth.js can drive boot + refresh chrome. */
+window.App = { init, router, renderNav, route, toast, esc };
+
+/* Boot: if the auth layer is present, let it decide when to init
+   (it gates on sign-in). Otherwise boot immediately (local mode). */
+function boot(){ if(window.Auth && typeof Auth.start==="function") Auth.start(); else init(); }
+// Defer by a tick so auth.js (the next <script>) has finished loading and
+// registered window.Auth before we decide whether to gate.
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(boot,0));
+else setTimeout(boot,0);
 })();

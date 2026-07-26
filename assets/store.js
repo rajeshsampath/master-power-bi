@@ -37,10 +37,13 @@ function load(){
 }
 load();
 
-let saveTimer=null;
+let saveTimer=null, saveCb=null, muteSync=false;
 function persist(){
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ Store._error=true; } }, 120);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ Store._error=true; }
+    if(saveCb && !muteSync){ try{ saveCb(); }catch(e){} }
+  }, 120);
 }
 
 /* streak logic */
@@ -109,6 +112,56 @@ const Store = {
   setSetting(k,v){ state.settings[k]=v; persist(); applySettings(); },
 
   reset(){ state = defaults(); persist(); applySettings(); },
+
+  /* ---- cloud-sync bridge (used by auth.js when signed in) ---- */
+  onSave(cb){ saveCb = cb; },                         // fires (debounced) after every save
+  exportState(){ return JSON.parse(JSON.stringify(state)); },
+  computeMetrics(){
+    const prog = Store.overallProgress();
+    const qv = Object.values(state.quiz).map(q=>q.best);
+    return {
+      pct: prog.pct,
+      lessons_done: prog.done,
+      avg_quiz: qv.length ? Math.round(qv.reduce((a,b)=>a+b,0)/qv.length) : 0,
+      readiness: Store.facultyReadiness(),
+      streak: state.streak.count || 0
+    };
+  },
+  /* Merge a remote blob into local without losing anything. Device
+     settings are intentionally NOT overwritten. Runs silently. */
+  mergeRemote(r){
+    if(!r || typeof r!=="object") return;
+    muteSync = true;
+    const l = state;
+    for(const k in (r.completed||{})){ if(!l.completed[k] || r.completed[k] < l.completed[k]) l.completed[k]=r.completed[k]; }
+    for(const k in (r.lessonState||{})){
+      const a=l.lessonState[k]||{}, b=r.lessonState[k]||{}, o=Object.assign({},a);
+      for(const f in b){
+        if(typeof b[f]==="string") o[f]=(b[f].length>(a[f]||"").length)?b[f]:(a[f]||"");
+        else o[f]=a[f]||b[f];
+      }
+      l.lessonState[k]=o;
+    }
+    for(const k in (r.notes||{})){ if((r.notes[k]||"").length>(l.notes[k]||"").length) l.notes[k]=r.notes[k]; }
+    l.bookmarks = [...new Set([...(l.bookmarks||[]), ...(r.bookmarks||[])])];
+    if((!l.recent||!l.recent.length) && r.recent) l.recent=r.recent;
+    if(!l.lastLesson && r.lastLesson) l.lastLesson=r.lastLesson;
+    for(const k in (r.quiz||{})){
+      const a=l.quiz[k], b=r.quiz[k];
+      l.quiz[k]= a ? { best:Math.max(a.best,b.best), attempts:(a.attempts||0)+(b.attempts||0), last:a.last } : b;
+    }
+    const seen=new Set((l.mistakes||[]).map(m=>m.date+"|"+m.text));
+    (r.mistakes||[]).forEach(m=>{ if(!seen.has(m.date+"|"+m.text)) l.mistakes.push(m); });
+    l.mistakes=(l.mistakes||[]).slice(0,50);
+    for(const k in (r.checklist||{})) l.checklist[k]=l.checklist[k]||r.checklist[k];
+    for(const k in (r.caseSteps||{})) l.caseSteps[k]=l.caseSteps[k]||r.caseSteps[k];
+    l.teachbacks=Math.max(l.teachbacks||0, r.teachbacks||0);
+    if(((r.streak&&r.streak.count)||0) > (l.streak.count||0)) l.streak=r.streak;
+    if(!l.path && r.path) l.path=r.path;
+    if(!l.diagnostic && r.diagnostic) l.diagnostic=r.diagnostic;
+    muteSync = false;
+    persist();
+  },
 
   /* derived helpers */
   moduleProgress(modN){
