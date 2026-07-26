@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-text="normal" data-motion="full">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Master Power BI — a self-contained toolkit to learn, practise, assess, and teach Power BI from scratch." />
+<title>Master Power BI · Learn, Practise, Assess, Teach</title>
+<link rel="preload" href="assets/styles.css" as="style" />
+<link rel="stylesheet" href="assets/styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23252423'/%3E%3Crect x='7' y='15' width='4.5' height='11' rx='1.5' fill='%23F2C811'/%3E%3Crect x='14' y='9' width='4.5' height='17' rx='1.5' fill='%23F2C811'/%3E%3Crect x='21' y='5' width='4.5' height='21' rx='1.5' fill='%23F2C811'/%3E%3C/svg%3E" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar" role="banner">
+  <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidenav">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+
+  <a class="brand" href="#/home" aria-label="Master Power BI home">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32"><rect x="4" y="17" width="5" height="11" rx="1.5"/><rect x="13" y="10" width="5" height="18" rx="1.5"/><rect x="22" y="5" width="5" height="23" rx="1.5"/></svg>
+    </span>
+    <span class="brand-text"><strong>Master Power&nbsp;BI</strong><em>Learn · Practise · Assess · Teach</em></span>
+  </a>
+
+  <div class="topbar-search" role="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="search-ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="search" id="globalSearch" placeholder="Search lessons, glossary, DAX…" aria-label="Search the whole platform" autocomplete="off" />
+    <div class="search-results" id="searchResults" role="listbox" aria-label="Search results" hidden></div>
+  </div>
+
+  <div class="topbar-tools">
+    <button class="icon-btn" id="themeBtn" aria-label="Switch to dark mode" title="Theme">
+      <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+      <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button>
+    <button class="icon-btn" id="a11yBtn" aria-label="Accessibility & display settings" title="Accessibility" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="1.8"/><path d="M4 8h16M12 8v7M12 15l-3.5 5M12 15l3.5 5"/></svg>
+    </button>
+    <button class="btn btn-ghost assistant-open" id="assistantBtn" aria-label="Open the Learning Assistant" aria-expanded="false" aria-controls="assistant">
+      <span class="pulse-dot" aria-hidden="true"></span> Assistant
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ============ SIDE NAV ============ -->
+  <nav class="sidenav" id="sidenav" aria-label="Primary">
+    <ul class="nav-list" id="navList"><!-- rendered by app.js --></ul>
+    <div class="nav-progress" id="navProgress" aria-hidden="true"></div>
+  </nav>
+  <div class="nav-scrim" id="navScrim" hidden></div>
+
+  <!-- ============ MAIN ============ -->
+  <main id="main" class="main" tabindex="-1">
+    <div id="view" class="view"><!-- routed views render here --></div>
+    <footer class="site-foot">
+      <p>Master Power BI is a self-paced toolkit. Your progress is saved privately in this browser — nothing leaves your device.</p>
+      <p class="foot-links">
+        <a href="#/help">Help</a> · <a href="#/reference">Reference</a> ·
+        <button class="linklike" id="resetBtn">Reset my progress</button>
+      </p>
+    </footer>
+  </main>
+</div>
+
+<!-- ============ LEARNING ASSISTANT ============ -->
+<aside class="assistant" id="assistant" aria-label="Learning Assistant" aria-hidden="true">
+  <header class="assistant-head">
+    <div class="assistant-title"><span class="pulse-dot" aria-hidden="true"></span> Learning Assistant</div>
+    <button class="icon-btn" id="assistantClose" aria-label="Close Learning Assistant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="assistant-context" id="assistantContext">Ask me about whatever you're looking at.</div>
+  <div class="assistant-log" id="assistantLog" aria-live="polite"></div>
+  <div class="assistant-chips" id="assistantChips"></div>
+  <form class="assistant-form" id="assistantForm">
+    <input type="text" id="assistantInput" placeholder="Ask a question or type 'hint'…" aria-label="Ask the Learning Assistant" autocomplete="off" />
+    <button class="icon-btn send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-7-7 16-2.5-6.5z"/></svg></button>
+  </form>
+  <p class="assistant-note">I guide and hint — I won't do the activity for you.</p>
+</aside>
+
+<!-- ============ A11Y DIALOG ============ -->
+<div class="modal-scrim" id="a11yModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="a11yTitle">
+    <header class="modal-head"><h2 id="a11yTitle">Display & accessibility</h2>
+      <button class="icon-btn" data-close-modal aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+    <div class="modal-body" id="a11yBody"><!-- rendered --></div>
+  </div>
+</div>
+
+<!-- toast region -->
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+<script src="assets/content.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/assistant.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
